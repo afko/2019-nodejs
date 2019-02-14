@@ -34,6 +34,14 @@ app.get('/book', getQuery); // get(router) method로 server에 요청이 들어�
 app.get('/book/:id', getQuery);
 app.get('/book/:id/:mode', getQuery);
 
+app.post('/book/create', postQuery);
+
+function postQuery(req, res){
+    var title = req.body.title;
+    var content = req.body.content;
+    res.send(title + " / " + content);
+}
+
 function getQuery(req, res) {
     var params = req.params;
     var datas = null;
@@ -41,18 +49,17 @@ function getQuery(req, res) {
     fs.readFile('./data/nav.json', 'utf-8', function (err, data) {
         if (err) res.status(500).send("Internal server error"); // 에러면 반응을 해라.
         datas = JSON.parse(data);
+        var pugData = {
+            pages: datas.books
+        };
 
         if (typeof params.id !== "undefined") {
             if (params.id == 'new') {
-                res.render('wr', {
-                    title: "신규 글 작성",
-                    pages: datas.books
-                });
+                pugData.title = "신규 글 등록";
+                res.render('wr', pugData);
             } else {
-                res.render('li', {
-                    title: "도서목록",
-                    pages: datas.books
-                });
+                pugData.title = "도서목록";
+                res.render('li', pugData);
             }
         } else {
             res.send('');
