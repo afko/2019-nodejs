@@ -36,17 +36,36 @@ app.get('/book/:id/:mode', getQuery);
 
 app.post('/book/create', postQuery);
 
-function postQuery(req, res){
-    var title = req.body.title;
+
+function postQuery(req, res) {
+    var tit = req.body.title;
     var content = req.body.content;
-    res.send(title + " / " + content);
+    var str = "";
+
+    fs.readFile('./data/book.json', 'utf-8', function (err, data) {
+        if (err) res.status(500).send("Internal server error");
+        datas = JSON.parse(data);
+        datas.books.push({
+            tit,
+            content,
+            id: datas.books[datas.books.length - 1].id + 1
+        });
+        str = JSON.stringify(datas);
+        fs.writeFile('./data/book.json', str, (err) => {
+            if (err) res.status(500).send("Internal server error");
+            else {
+                res.send("저장 성공");
+            }
+        });
+    });
+
 }
 
 function getQuery(req, res) {
     var params = req.params;
     var datas = null;
 
-    fs.readFile('./data/nav.json', 'utf-8', function (err, data) {
+    fs.readFile('./data/book.json', 'utf-8', function (err, data) {
         if (err) res.status(500).send("Internal server error"); // 에러면 반응을 해라.
         datas = JSON.parse(data);
         var pugData = {
