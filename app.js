@@ -2,6 +2,11 @@ const express = require('express');
 const bodyParser = require('body-parser'); // 효자
 const multer = require('multer');
 
+// db연동
+const db = require('./mysql_conn');
+const mysql = db.mysql;
+const conn = db.conn;
+
 const app = express();
 const port = 3500;
 
@@ -10,22 +15,21 @@ const port = 3500;
 }); */
 
 const storage = multer.diskStorage({
-    destination: function (req, file, cb) {  // cb가 callback함수
+    destination: function (req, file, cb) { // cb가 callback함수
         var date = new Date();
         var getMonth = (month) => {
             if (month + 1 < 10) return "0" + (month + 1);
             else return month + 1;
         }
         var folder = "uploads/book/" + String(date.getFullYear()).substr(2) + getMonth(date.getMonth()) + "/";
-        if(!fs.existsSync(folder)){
-            fs.mkdir(folder, (err)=>{
+        if (!fs.existsSync(folder)) {
+            fs.mkdir(folder, (err) => {
                 if (!err) cb(null, folder);
             });
-        }
-        else{
+        } else {
             cb(null, folder);
         }
-        
+
     },
     filename: function (req, file, cb) {
         cb(null, Date.now() + '-' + file.originalname);
@@ -71,7 +75,7 @@ app.get('/book/:id/:mode', getQuery);
 app.post('/book/create', upload.single('upfile'), postQuery);
 
 
-function postQuery(req, res) {
+function postQuery(req, res, next) {
     var tit = req.body.title;
     var content = req.body.content;
     var str = "";
@@ -86,6 +90,18 @@ function postQuery(req, res) {
             id
         });
         str = JSON.stringify(datas);
+
+        var sql = " INSERT INTO books SET  title=?, content=?, filename=? ";
+        var params = [tit, content, req.file.filename];
+
+        conn.query(sql, params, (err, rows, field) => {
+            if (err) {
+                console.log(err);
+            } else {
+                console.log(rows);
+            }
+        });
+
         fs.writeFile('./data/book.json', str, (err) => {
             if (err) res.status(500).send("Internal server error");
             else {
@@ -189,13 +205,13 @@ app.get("/info", (req, res) => {
 });
 
 // multer 확장자 체크
-function fileFilter (req, file, cb) {
+function fileFilter(req, file, cb) {
     var filename = file.originalname.split('.');
-    var ext = filename[filename.length-1];
+    var ext = filename[filename.length - 1];
     var allowExt = "jpg | gif | jpeg | png";
     if (allowExt.includes(ext)) cb(null, true);
     else cb(null, false);
-  }
+}
 
 
 
@@ -211,3 +227,5 @@ app.delete('/', (req, res) => res.send('World~ World!')); */
 
 
 app.listen(port, () => console.log(`http://localhost:${port}`));
+
+console.log()
