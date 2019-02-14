@@ -1,8 +1,41 @@
 const express = require('express');
 const bodyParser = require('body-parser'); // 효자
+const multer = require('multer');
 
 const app = express();
 const port = 3500;
+
+/* var upload = multer({
+    dest: 'uploads/'
+}); */
+
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {  // cb가 callback함수
+        var date = new Date();
+        var getMonth = (month) => {
+            if (month + 1 < 10) return "0" + (month + 1);
+            else return month + 1;
+        }
+        var folder = "uploads/book/" + String(date.getFullYear()).substr(2) + getMonth(date.getMonth()) + "/";
+        if(!fs.existsSync(folder)){
+            fs.mkdir(folder, (err)=>{
+                if (!err) cb(null, folder);
+            });
+        }
+        else{
+            cb(null, folder);
+        }
+        
+    },
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + '-' + file.originalname);
+    }
+});
+
+var upload = multer({
+    storage: storage,
+    fileFilter
+});
 
 app.locals.pretty = true;
 
@@ -10,6 +43,7 @@ app.locals.pretty = true;
 // static이기 때문에 사용자가 접근 가능
 app.use('/', express.static('public')); // public folder가 root 폴더가 됨.
 app.use('/assets', express.static('assets')); // >> 정적인 폴더가 된다. 절대 경로로 구현
+app.use('/uploads', express.static('uploads'));
 
 //bodyparser 설정
 app.use(bodyParser.urlencoded({
@@ -34,7 +68,7 @@ app.get('/book', getQuery); // get(router) method로 server에 요청이 들어�
 app.get('/book/:id', getQuery);
 app.get('/book/:id/:mode', getQuery);
 
-app.post('/book/create', postQuery);
+app.post('/book/create', upload.single('upfile'), postQuery);
 
 
 function postQuery(req, res) {
@@ -45,16 +79,27 @@ function postQuery(req, res) {
     fs.readFile('./data/book.json', 'utf-8', function (err, data) {
         if (err) res.status(500).send("Internal server error");
         datas = JSON.parse(data);
+        var id = datas.books[datas.books.length - 1].id + 1
         datas.books.push({
             tit,
             content,
-            id: datas.books[datas.books.length - 1].id + 1
+            id
         });
         str = JSON.stringify(datas);
         fs.writeFile('./data/book.json', str, (err) => {
             if (err) res.status(500).send("Internal server error");
             else {
-                res.send("저장 성공");
+                // redirect 방법
+                // #1
+                // res.send(`<script>location.href="/book/${id}"</script>`);
+                // #2
+                res.redirect("/book/" + id);
+                // #3 express 안 쓸때
+                /* res.writeHead(301, {
+                    Location: '/book/' + id
+                });
+                res.end(); */
+
             }
         });
     });
@@ -143,6 +188,17 @@ app.get("/info", (req, res) => {
 
 });
 
+// multer 확장자 체크
+function fileFilter (req, file, cb) {
+    var filename = file.originalname.split('.');
+    var ext = filename[filename.length-1];
+    var allowExt = "jpg | gif | jpeg | png";
+    if (allowExt.includes(ext)) cb(null, true);
+    else cb(null, false);
+  }
+
+
+
 // 동적 생성, 따라서 스크립트를 수정해도 서버에 올라가 있어서 now말고는 값이 바뀌지 않는다.
 // public에서 수정이되면 즉시 값이 바뀜.
 
@@ -152,5 +208,6 @@ app.get('/', (req, res) => res.send('World~ World!'));// router
 app.post('/', (req, res) => res.send('World~ World!'));
 app.put('/', (req, res) => res.send('World~ World!'));
 app.delete('/', (req, res) => res.send('World~ World!')); */
+
 
 app.listen(port, () => console.log(`http://localhost:${port}`));
