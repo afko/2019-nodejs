@@ -7,8 +7,9 @@ const port = 3500;
 app.locals.pretty = true;
 
 //express 설정
+// static이기 때문에 사용자가 접근 가능
 app.use('/', express.static('public')); // public folder가 root 폴더가 됨.
-app.use('/assets', express.static('assets')); // >> 정적인 폴더가 된다.
+app.use('/assets', express.static('assets')); // >> 정적인 폴더가 된다. 절대 경로로 구현
 
 //bodyparser 설정
 app.use(bodyParser.urlencoded({
@@ -21,37 +22,43 @@ app.set('view engine', 'pug');
 app.set('views', './views'); // 현재 app.js가 있는 폴더의 views폴더로 들어간다.
 // console.log(__dirname);
 
+// file을 불러오는 module
+const fs = require('fs'); // fs는 file system의 약자. 내장 객체 이다.
+
 
 // use는 method를 던져서
 // set은 setter
 
 
-app.get('/book', getQuery);
+app.get('/book', getQuery); // get(router) method로 server에 요청이 들어오면 getQuery 실행.
 app.get('/book/:id', getQuery);
 app.get('/book/:id/:mode', getQuery);
 
 function getQuery(req, res) {
     var params = req.params;
-    var pageTits = ["MAIN", "PAGE1", "PAGE2", "PAGE3"];
-    if (typeof params.id !== "undefined") {
-        if (params.id == 'new') {
-            res.render('wr', {
-                title: "글쓰기"
-            });
+    var datas = null;
+
+    fs.readFile('./data/nav.json', 'utf-8', function (err, data) {
+        if (err) res.status(500).send("Internal server error"); // 에러면 반응을 해라.
+        datas = JSON.parse(data);
+
+        if (typeof params.id !== "undefined") {
+            if (params.id == 'new') {
+                res.render('wr', {
+                    title: "신규 글 작성",
+                    pages: datas.books
+                });
+            } else {
+                res.render('li', {
+                    title: "도서목록",
+                    pages: datas.books
+                });
+            }
         } else {
-            res.render('nav', {
-                title: "도서목록",
-                pages: [
-                    {id:0, tit:"홍길동전"},
-                    {id:1, tit:"구운몽"},
-                    {id:2, tit:"태백산맥"},
-                    {id:3, tit:"토끼와거북이"}
-                ]
-            });
+            res.send('');
         }
-    } else {
-        res.send();
-    }
+    });
+
 };
 
 
@@ -108,7 +115,9 @@ app.get("/info", (req, res) => {
     `;
     res.send(html); // 응답을 보내라
 
-}); // 동적 생성, 따라서 스크립트를 수정해도 서버에 올라가 있어서 now말고는 값이 바뀌지 않는다.
+});
+
+// 동적 생성, 따라서 스크립트를 수정해도 서버에 올라가 있어서 now말고는 값이 바뀌지 않는다.
 // public에서 수정이되면 즉시 값이 바뀜.
 
 // RESTful node.jss
